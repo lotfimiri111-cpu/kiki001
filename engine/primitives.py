@@ -557,343 +557,482 @@ def section_tag(slide, label: str, x, y, T):
         color=T.text_dark_rgb, align=PP_ALIGN.CENTER, rtl=True)
 
 
-# ══════════════════════════════════════════════════════════════════════
-# DESIGN INTELLIGENCE LAYER — v28
-# Smart layout utilities that respond to content
-# ══════════════════════════════════════════════════════════════════════
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# PREMIUM DESIGN SYSTEM v28 — Advanced Visual Intelligence
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-def _smart_font_size(text: str, base: float, min_s: float, max_s: float,
-                      area_w: float, area_h: float,
-                      chars_per_pt: float = 0.065) -> float:
-    """
-    Compute font size that fits `text` inside (area_w × area_h).
-    chars_per_pt = approximate chars per pt width per cm of width.
-    """
-    if not text:
-        return base
-    length = len(text)
-    # Very short → go large; very long → go small
-    if length <= 20:
-        factor = 1.18
-    elif length <= 40:
-        factor = 1.0
-    elif length <= 70:
-        factor = 0.88
-    elif length <= 110:
-        factor = 0.76
-    else:
-        factor = 0.66
-    size = base * factor
-    return max(min_s, min(max_s, size))
-
-
-def smart_title(slide, text: str, x, y, w, h, T, font="Cairo",
-                base_size=30, min_s=18, max_s=38, rtl=True, vcenter=True):
-    """
-    Dominant section title with smart sizing and accent underline.
-    """
-    from pptx.enum.text import PP_ALIGN
-    fs = _smart_font_size(text, base_size, min_s, max_s, w, h)
-    title_h = h * 0.72 if h > 1.0 else h
-    t = txt(slide, text, x, y, w, title_h,
-            font=font, size=fs, bold=True,
-            color=T.text_light_rgb, align=PP_ALIGN.RIGHT,
-            rtl=rtl, vcenter=vcenter, line_spacing=1.05)
-    return t
-
-
-def accent_pill(slide, text: str, x, y, T, font="Cairo", size=10.5):
-    """Small accent-colored pill label."""
-    from pptx.enum.text import PP_ALIGN
-    w = max(2.8, len(text) * 0.18 + 0.6)
-    h = 0.44
-    b = rrect(slide, x, y, w, h, T.accent_rgb, radius_pct=50)
+def accent_bar_v(slide, x, y, h, T, width=0.18, alpha=100):
+    """Vertical accent bar — signature premium left/right edge."""
+    b = rect(slide, x, y, width, h, T.accent_rgb)
     if b:
-        gradient_fill(b, T.accent_grad1, T.accent_grad2, 0)
-    txt(slide, text, x, y, w, h,
-        font=font, size=size, bold=True,
-        color=T.text_dark_rgb, align=PP_ALIGN.CENTER, rtl=True)
-    return w, h
+        gradient_fill(b, T.accent_grad1, T.accent_grad2, 90)
+        if alpha < 100:
+            set_solid_alpha(b, alpha)
+    return b
 
 
-def premium_card(slide, x, y, w, h, T, radius=12, depth=True, glow_on=True):
+def kpi_card(slide, x, y, w, h, value: str, label: str, T,
+             unit: str = '', icon: str = '', rank: int = 0):
     """
-    Premium card with layered shadow, gradient, optional glow.
-    Returns the main card shape.
+    KPI stat card — content-aware sizing.
+    value: big number/text  label: description  unit: optional unit
+    Automatically scales font based on value length.
     """
-    if depth:
-        # Deep shadow base
-        sh = rrect(slide, x + 0.18, y + 0.24, w, h, T.bg_rgb, radius_pct=radius)
-        if sh:
-            set_solid_alpha(sh, 35)
-    c = rrect(slide, x, y, w, h, T.card_rgb, radius_pct=radius)
-    if c:
-        multi_stop_gradient(c, [(0, T.card), (60, T.bg2), (100, T.bg)], 135)
-        shadow(c, blur=22, dist=6, alpha=0.44)
-        if glow_on:
-            glow(c, T.accent.lstrip('#'), radius=16, alpha=0.07)
-    return c
-
-
-def card_with_accent_top(slide, x, y, w, h, T, radius=12, bar_h=0.38):
-    """Card with colored accent bar on top."""
-    c = premium_card(slide, x, y, w, h, T, radius=radius)
-    bar = rrect(slide, x, y, w, bar_h, T.accent_rgb, radius_pct=0)
-    if bar:
-        multi_stop_gradient(bar, [(0, T.accent2), (50, T.accent), (100, T.accent2)], 0)
-        glow(bar, T.accent.lstrip('#'), radius=10, alpha=0.22)
-    return c
-
-
-def card_with_accent_side(slide, x, y, w, h, T, radius=12, bar_w=0.26):
-    """Card with colored accent bar on right side (RTL primary)."""
-    c = premium_card(slide, x, y, w, h, T, radius=radius)
-    bar = rrect(slide, x + w - bar_w, y, bar_w, h, T.accent_rgb, radius_pct=0)
-    if bar:
-        gradient_fill(bar, T.accent_grad1, T.accent_grad2, 90)
-    return c
-
-
-def kpi_card(slide, x, y, w, h, T, value: str, label: str,
-             unit: str = '', font="Cairo"):
-    """
-    Premium KPI/stat card: giant centered value + label below.
-    Auto-scales value font based on length.
-    """
-    from pptx.enum.text import PP_ALIGN
-    # Card base
+    # Outer card
     c = rrect(slide, x, y, w, h, T.card_rgb, radius_pct=14)
     if c:
-        multi_stop_gradient(c, [(0, T.bg2), (50, T.card), (100, T.bg2)], 135)
+        multi_stop_gradient(c, [(0, T.bg2), (60, T.card), (100, T.bg2)], 135)
         shadow(c, blur=20, dist=6, alpha=0.45)
 
-    # Accent top stripe
-    tp = rrect(slide, x, y, w, 0.32, T.accent_rgb, radius_pct=0)
+    # Top accent strip
+    tp = rrect(slide, x, y, w, 0.26, T.accent_rgb, radius_pct=0)
     if tp:
         multi_stop_gradient(tp, [(0, T.accent2), (50, T.accent), (100, T.accent2)], 0)
-        glow(tp, T.accent.lstrip('#'), radius=8, alpha=0.28)
 
-    # Bottom pulse bar
+    # Bottom accent strip
     bp = rrect(slide, x, y + h - 0.18, w, 0.18, T.accent_rgb, radius_pct=0)
     if bp:
-        set_solid_alpha(bp, 30)
+        set_solid_alpha(bp, 35)
 
-    # Value — giant, centered
+    # Value — dynamically sized
     vlen = len(str(value))
-    vs = 46 if vlen <= 2 else 38 if vlen <= 4 else 28 if vlen <= 7 else 22
-    txt(slide, str(value), x + 0.12, y + 0.32, w - 0.24, h * 0.50,
-        font="Calibri", size=vs, bold=True,
-        color=T.accent_rgb, align=PP_ALIGN.CENTER, rtl=False, vcenter=True)
+    vs = 44 if vlen <= 3 else 34 if vlen <= 6 else 26 if vlen <= 10 else 20
+    value_h = h * 0.52
+    txt(slide, str(value), x + 0.1, y + 0.26, w - 0.2, value_h,
+        font='Calibri', size=vs, bold=True, color=T.accent_rgb,
+        align=PP_ALIGN.CENTER, rtl=False, vcenter=True)
 
-    # Unit badge (if present)
+    # Unit badge (if provided)
     if unit:
-        ub = rrect(slide, x + w / 2 - 1.6, y + h * 0.53 + 0.06, 3.2, 0.42,
+        ub = rrect(slide, x + w/2 - 1.3, y + 0.26 + value_h - 0.05, 2.6, 0.38,
                    T.bg_rgb, radius_pct=40)
         if ub:
-            set_solid_alpha(ub, 55)
-        txt(slide, unit, x + w / 2 - 1.6, y + h * 0.53 + 0.06, 3.2, 0.42,
-            font=font, size=9.5, bold=False,
-            color=T.muted_rgb, align=PP_ALIGN.CENTER, rtl=True, vcenter=True)
+            set_solid_alpha(ub, 48)
+        txt(slide, unit, x + w/2 - 1.3, y + 0.26 + value_h - 0.05, 2.6, 0.38,
+            font='Cairo', size=9, bold=False, color=T.muted_rgb,
+            align=PP_ALIGN.CENTER, rtl=True, vcenter=True)
 
     # Divider
-    hline(slide, x + w * 0.14, y + h * 0.71, w * 0.72, T.muted_rgb, thickness=0.04)
+    div_y = y + 0.26 + value_h + (0.44 if unit else 0.06)
+    hline(slide, x + w*0.12, div_y, w*0.76, T.muted_rgb, thickness=0.04)
 
     # Label
-    txt(slide, label, x + 0.12, y + h * 0.73, w - 0.24, h * 0.25,
-        font=font, size=max(10, min(13, h * 5.5)), bold=False,
-        color=T.text_light_rgb, align=PP_ALIGN.CENTER, rtl=True, vcenter=True)
+    label_h = h - (div_y - y) - 0.28
+    txt(slide, label, x + 0.15, div_y + 0.08, w - 0.3, max(0.4, label_h),
+        font='Cairo', size=max(11, min(13, label_h * 7)), bold=False,
+        color=T.text_light_rgb, align=PP_ALIGN.CENTER,
+        rtl=True, vcenter=True, line_spacing=1.15)
+    return c
 
 
-def result_row(slide, x, y, w, h, T, text: str, index: int,
-               font="Cairo", highlight=False):
+def result_row_premium(slide, x, y, w, h, text: str, num: int, T,
+                        highlight: bool = False):
     """
-    Premium result list row with smart font sizing.
-    index: 1-based number shown in badge on right.
-    highlight: makes row visually stronger (for key results).
+    Premium result row — content-aware with optional highlight.
+    Highlight = first/key result gets special treatment.
     """
-    from pptx.enum.text import PP_ALIGN
-    even = (index % 2 == 0)
-
-    # Row background
-    rw = rrect(slide, x, y, w, h,
-               T.card_rgb if not even else T.bg2_rgb,
-               radius_pct=10)
-    if rw:
-        stops = [(0, T.card), (100, T.bg2)] if not even else [(0, T.bg2), (100, T.card)]
-        multi_stop_gradient(rw, stops, 0)
-        if highlight:
-            shadow(rw, blur=12, dist=3, alpha=0.32)
-            glow(rw, T.accent.lstrip('#'), radius=12, alpha=0.06)
-        else:
-            shadow(rw, blur=5, dist=2, alpha=0.16)
-
-    # Accent side bar (fades with index for visual rhythm)
-    alpha_bar = max(22, 62 - index * 6)
-    bar = rect(slide, x + w - 0.28, y, 0.28, h, T.accent_rgb)
-    if bar:
-        gradient_fill(bar, T.accent_grad1, T.accent_grad2, 90)
-        set_solid_alpha(bar, alpha_bar)
+    if highlight:
+        # Highlighted row: gradient + glow
+        rw = rrect(slide, x, y, w, h, T.card_rgb, radius_pct=10)
+        if rw:
+            multi_stop_gradient(rw, [(0, T.card), (100, T.bg2)], 0)
+            shadow(rw, blur=12, dist=3, alpha=0.35)
+            glow(rw, T.accent.lstrip('#'), radius=15, alpha=0.08)
+        # Left accent line (RTL: right side)
+        al = rect(slide, x + w - 0.32, y, 0.32, h, T.accent_rgb)
+        if al:
+            gradient_fill(al, T.accent_grad1, T.accent_grad2, 90)
+    else:
+        even = num % 2 == 0
+        rw = rrect(slide, x, y, w, h,
+                   T.card_rgb if even else T.bg2_rgb, radius_pct=8)
+        if rw:
+            stops = [(0, T.card), (100, T.bg2)] if even else [(0, T.bg2), (100, T.card)]
+            multi_stop_gradient(rw, stops, 0)
+            shadow(rw, blur=4, dist=1, alpha=0.15)
+        al = rect(slide, x + w - 0.28, y, 0.28, h, T.accent_rgb)
+        if al:
+            gradient_fill(al, T.accent_grad1, T.accent_grad2, 90)
+            set_solid_alpha(al, max(18, 55 - num * 6))
 
     # Number badge
     nd = min(0.68, h * 0.72)
-    nb_x = x + w - 1.1 - nd
+    nb_x = x + w - 0.32 - 0.22 - nd
     nb_y = y + (h - nd) / 2
-    nb_c = oval(slide, nb_x, nb_y, nd, nd, T.accent_rgb)
-    if nb_c:
-        multi_stop_gradient(nb_c, [(0, T.accent), (100, T.accent2)], 135)
-        shadow(nb_c, blur=8, dist=2, alpha=0.3)
-    txt(slide, str(index), nb_x, nb_y, nd, nd,
-        font="Calibri", size=max(9, int(nd * 11)), bold=True,
+    nc = oval(slide, nb_x, nb_y, nd, nd, T.accent_rgb)
+    if nc:
+        multi_stop_gradient(nc, [(0, T.accent), (100, T.accent2)], 135)
+        shadow(nc, blur=6, dist=2, alpha=0.3)
+    txt(slide, str(num), nb_x, nb_y, nd, nd,
+        font='Calibri', size=max(8, int(nd * 12)), bold=True,
         color=T.text_dark_rgb, align=PP_ALIGN.CENTER, rtl=False, vcenter=True)
 
-    # Content text — smart sizing
-    text_w = w - nd - 1.5
-    fs = _smart_font_size(text, 13.5, 11, 15.5, text_w, h)
-    txt(slide, text, x + 0.25, y, text_w, h,
-        font=font, size=fs, bold=highlight,
-        color=T.text_light_rgb if not highlight else T.accent_rgb,
-        align=PP_ALIGN.RIGHT, rtl=True, vcenter=True, line_spacing=1.2)
+    # Text — content-aware font size
+    text_w = w - nd - 0.65 - (0.35 if highlight else 0.30)
+    char_count = len(text)
+    fs = 14 if char_count < 60 else 13 if char_count < 100 else 12 if char_count < 150 else 11
+    fs = max(fs, min(15, h * 9))
+    txt(slide, text, x + 0.28, y, text_w, h,
+        font='Cairo', size=fs, bold=highlight, color=T.text_light_rgb,
+        align=PP_ALIGN.RIGHT, rtl=True, vcenter=True, line_spacing=1.25)
+    return rw
 
 
-def premium_header(slide, T, title: str, subtitle: str = '',
-                   slide_num: int = None, total: int = 13,
-                   accent_side='right', font="Cairo"):
-    """
-    Premium header with:
-    - Dominant gradient background
-    - Strong title with smart sizing
-    - Subtle subtitle
-    - Slide counter badge
-    - Multi-layer accent lines
-    """
-    from pptx.enum.text import PP_ALIGN
-    HDR_H = 3.0
+def section_header_band(slide, x, y, w, h, title: str, subtitle: str, T,
+                          icon: str = ''):
+    """Premium section header band — replaces simple label."""
+    bg_b = rrect(slide, x, y, w, h, T.bg2_rgb, radius_pct=10)
+    if bg_b:
+        multi_stop_gradient(bg_b, [(0, T.card), (100, T.bg2)], 0)
+        shadow(bg_b, blur=10, dist=3, alpha=0.25)
 
-    # Main header background — deep gradient
-    gradient_rect(slide, 0, 0, W, HDR_H, T.grad2, T.grad1, angle=130)
+    # Left accent bar (RTL: right)
+    accent_bar_v(slide, x + w - 0.22, y, h, T, width=0.22)
 
-    # Layered accent lines at bottom
-    al1 = rect(slide, 0, HDR_H - 0.26, W, 0.26, T.accent_rgb)
-    if al1:
-        multi_stop_gradient(al1, [(0, T.bg), (35, T.accent2), (50, T.accent),
-                                   (65, T.accent2), (100, T.bg)], 0)
-    rect(slide, 0, HDR_H - 0.32, W, 0.06, T.muted_rgb)
-    rect(slide, 0, HDR_H - 0.06, W, 0.06, T.bg_rgb)
-
-    # Accent vertical bar
-    if accent_side == 'right':
-        av = rect(slide, W - 0.56, 0, 0.56, HDR_H, T.accent_rgb)
+    if icon:
+        txt(slide, icon, x + 0.3, y, h * 1.2, h,
+            font='Calibri', size=int(h * 12), bold=False,
+            color=T.accent_rgb, align=PP_ALIGN.LEFT, rtl=False, vcenter=True)
+        text_x = x + h * 1.1 + 0.5
     else:
-        av = rect(slide, 0, 0, 0.56, HDR_H, T.accent_rgb)
-    if av:
-        gradient_fill(av, T.accent_grad1, T.accent_grad2, 90)
+        text_x = x + 0.4
 
-    # Decorative background circle
-    oval(slide, W - 5.5, -2.5, 8, 8, T.accent_rgb, alpha=8)
+    title_w = w - (text_x - x) - 0.4
+    if subtitle:
+        txt(slide, title, text_x, y, title_w, h * 0.58,
+            font='Cairo', size=max(13, int(h * 11)), bold=True,
+            color=T.text_light_rgb, align=PP_ALIGN.RIGHT, rtl=True, vcenter=True)
+        txt(slide, subtitle, text_x, y + h * 0.56, title_w, h * 0.44,
+            font='Cairo', size=max(10, int(h * 8)), bold=False,
+            color=T.muted_rgb, align=PP_ALIGN.RIGHT, rtl=True, vcenter=True)
+    else:
+        txt(slide, title, text_x, y, title_w, h,
+            font='Cairo', size=max(13, int(h * 11)), bold=True,
+            color=T.text_light_rgb, align=PP_ALIGN.RIGHT, rtl=True, vcenter=True)
+    return bg_b
+
+
+def highlight_chip(slide, x, y, w, h, text: str, T, style='accent'):
+    """Pill-shaped highlight chip for key terms."""
+    if style == 'accent':
+        b = rrect(slide, x, y, w, h, T.accent_rgb, radius_pct=50)
+        if b:
+            gradient_fill(b, T.accent_grad1, T.accent_grad2, 0)
+            shadow(b, blur=8, dist=2, alpha=0.3)
+        tc = T.text_dark_rgb
+    elif style == 'muted':
+        b = rrect(slide, x, y, w, h, T.bg2_rgb, radius_pct=50)
+        if b:
+            set_solid_alpha(b, 70)
+        tc = T.muted_rgb
+    else:  # ghost
+        b = rrect(slide, x, y, w, h, T.accent_rgb, radius_pct=50)
+        if b:
+            set_solid_alpha(b, 18)
+        tc = T.accent_rgb
+
+    txt(slide, text, x, y, w, h,
+        font='Cairo', size=max(9, int(h * 10)), bold=True,
+        color=tc, align=PP_ALIGN.CENTER, rtl=True, vcenter=True)
+    return b
+
+
+def content_card_premium(slide, x, y, w, h, T, accent_side='right',
+                           radius=12, depth=True):
+    """
+    Premium content card with optional 3D depth effect.
+    More sophisticated than card_3d — uses multi-layer system.
+    """
+    if depth:
+        # Shadow layer
+        sh_s = rrect(slide, x + 0.18, y + 0.25, w, h, T.bg_rgb, radius_pct=radius)
+        if sh_s:
+            set_solid_alpha(sh_s, 35)
+
+    # Main card body
+    c = rrect(slide, x, y, w, h, T.card_rgb, radius_pct=radius)
+    if c:
+        multi_stop_gradient(c, [(0, T.card), (55, T.bg2), (100, T.card)], 135)
+        shadow(c, blur=22, dist=7, alpha=0.48)
+
+    # Accent edge
+    edge_w = 0.25
+    if accent_side == 'right':
+        e = rrect(slide, x + w - edge_w, y, edge_w, h, T.accent_rgb, radius_pct=0)
+    else:
+        e = rrect(slide, x, y, edge_w, h, T.accent_rgb, radius_pct=0)
+    if e:
+        gradient_fill(e, T.accent_grad1, T.accent_grad2, 90)
+
+    # Subtle inner highlight (top edge)
+    hl = rrect(slide, x, y, w, 0.08, T.accent_rgb, radius_pct=0)
+    if hl:
+        set_solid_alpha(hl, 22)
+
+    return c
+
+
+def two_col_layout(slide, T, left_items, right_items,
+                    CY, CH, left_label='', right_label='',
+                    left_icon='', right_icon='', font='Cairo'):
+    """
+    Smart two-column layout — content-aware distribution.
+    Automatically balances items between columns.
+    """
+    gap = 0.35
+    col_w = (W - 2.0 - gap) / 2
+
+    for ci, (label, icon, items) in enumerate([
+        (left_label, left_icon, left_items),
+        (right_label, right_icon, right_items)
+    ]):
+        x = 1.0 + ci * (col_w + gap)
+
+        # Column card
+        cc = content_card_premium(slide, x, CY, col_w, CH, T,
+                                   accent_side='right' if ci == 0 else 'left')
+
+        # Column header
+        hh = 0.78
+        hdr = rrect(slide, x, CY, col_w, hh, T.accent_rgb, radius_pct=0)
+        if hdr:
+            multi_stop_gradient(hdr, [(0, T.accent2), (50, T.accent), (100, T.accent2)], 0)
+
+        icon_offset = 0.0
+        if icon:
+            txt(slide, icon, x + col_w - 1.1, CY, 0.9, hh,
+                font='Calibri', size=18, bold=False, color=T.text_dark_rgb,
+                align=PP_ALIGN.CENTER, rtl=False, vcenter=True)
+            icon_offset = 0.9
+
+        if label:
+            txt(slide, label, x + 0.2, CY, col_w - 0.3 - icon_offset, hh,
+                font=font, size=17, bold=True, color=T.text_dark_rgb,
+                align=PP_ALIGN.CENTER, rtl=True, vcenter=True)
+
+        # Items
+        ia = CH - hh - 0.1
+        n_items = min(len(items), 8)
+        ig = 0.1
+        ih = (ia - ig * max(0, n_items - 1)) / max(1, n_items)
+
+        for j, item in enumerate(items[:8]):
+            iy = CY + hh + 0.05 + j * (ih + ig)
+            rb = rrect(slide, x + 0.1, iy, col_w - 0.2, ih,
+                       T.bg2_rgb if j % 2 == 0 else T.bg_rgb, radius_pct=6)
+            if rb:
+                set_solid_alpha(rb, 65)
+
+            # Number badge
+            nd = min(0.50, ih * 0.68)
+            nc = oval(slide, x + col_w - 0.14 - nd - 0.22, iy + (ih - nd) / 2, nd, nd, T.accent_rgb)
+            if nc:
+                multi_stop_gradient(nc, [(0, T.accent), (100, T.accent2)], 135)
+                shadow(nc, blur=5, dist=1, alpha=0.28)
+            txt(slide, str(j + 1),
+                x + col_w - 0.14 - nd - 0.22, iy + (ih - nd) / 2, nd, nd,
+                font='Calibri', size=max(7, int(nd * 11)), bold=True,
+                color=T.text_dark_rgb, align=PP_ALIGN.CENTER, rtl=False, vcenter=True)
+
+            # Content-aware font size
+            char_c = len(str(item))
+            fs = max(11, min(14, ih * 8.5))
+            if char_c > 80:
+                fs = max(10, fs - 1)
+
+            txt(slide, item, x + 0.22, iy, col_w - nd - 0.62, ih,
+                font=font, size=fs, bold=False, color=T.text_light_rgb,
+                align=PP_ALIGN.RIGHT, rtl=True, vcenter=True, line_spacing=1.2)
+
+
+def methodology_card(slide, x, y, w, h, label: str, value: str, icon: str, T):
+    """
+    Methodology card — content-aware layout.
+    Adjusts icon/text balance based on text length.
+    """
+    # Card base
+    cc = rrect(slide, x, y, w, h, T.card_rgb, radius_pct=14)
+    if cc:
+        multi_stop_gradient(cc, [(0, T.card), (100, T.bg2)], 145)
+        shadow(cc, blur=16, dist=5, alpha=0.42)
+
+    # Icon section height = 38% of card, but less if text is long
+    text_len = len(str(value))
+    icon_ratio = 0.32 if text_len > 80 else 0.38 if text_len > 40 else 0.44
+
+    ic_s = min(1.85, h * icon_ratio)
+    ic_x = x + w / 2 - ic_s / 2
+    ic_y = y + max(0.22, (h * icon_ratio - ic_s) / 2 + 0.15)
+
+    # Icon circle
+    ic_bg = oval(slide, ic_x, ic_y, ic_s, ic_s, T.accent_rgb)
+    if ic_bg:
+        multi_stop_gradient(ic_bg, [(0, T.accent), (100, T.accent2)], 135)
+        shadow(ic_bg, blur=10, dist=3, alpha=0.32)
+        glow(ic_bg, T.accent.lstrip('#'), radius=14, alpha=0.18)
+    txt(slide, icon, ic_x, ic_y + 0.04, ic_s, ic_s * 0.9,
+        font='Calibri', size=max(14, int(ic_s * 10)), bold=False,
+        color=T.text_dark_rgb, align=PP_ALIGN.CENTER, rtl=False, vcenter=True)
+
+    # Label
+    lbl_y = ic_y + ic_s + 0.22
+    txt(slide, label, x + 0.18, lbl_y, w - 0.36, 0.64,
+        font='Cairo', size=17, bold=True, color=T.accent_rgb,
+        align=PP_ALIGN.CENTER, rtl=True, vcenter=True)
+
+    # Divider
+    hline(slide, x + w * 0.15, lbl_y + 0.66, w * 0.7, T.muted_rgb, thickness=0.04)
+
+    # Value text — content-aware
+    val_y = lbl_y + 0.76
+    val_h = h - (val_y - y) - 0.3
+    fs = max(11, min(14, val_h * 5.5))
+    if text_len > 100:
+        fs = max(10, fs - 1)
+    txt(slide, value, x + 0.2, val_y, w - 0.4, val_h,
+        font='Cairo', size=fs, bold=False, color=T.text_light_rgb,
+        align=PP_ALIGN.CENTER, rtl=True, vcenter=True, line_spacing=1.28)
+    return cc
+
+
+def premium_cover_frame(slide, cx, cy, cw, ch, T):
+    """
+    Premium cover card frame — multi-layer with depth.
+    Returns the main card shape.
+    """
+    # Deep shadow
+    ds = rrect(slide, cx + 0.28, cy + 0.38, cw, ch, T.bg_rgb, radius_pct=16)
+    if ds:
+        set_solid_alpha(ds, 28)
+
+    # Medium shadow
+    ms = rrect(slide, cx + 0.14, cy + 0.2, cw, ch, T.bg_rgb, radius_pct=16)
+    if ms:
+        set_solid_alpha(ms, 22)
+
+    # Main card
+    mc = rrect(slide, cx, cy, cw, ch, T.card_rgb, radius_pct=16)
+    if mc:
+        multi_stop_gradient(mc, [(0, T.card), (50, T.bg2), (100, T.card)], 135)
+        shadow(mc, blur=32, dist=10, alpha=0.55)
+        glow(mc, T.accent.lstrip('#'), radius=42, alpha=0.11)
+
+    # Top accent bar
+    ct = rrect(slide, cx, cy, cw, 0.42, T.accent_rgb, radius_pct=0)
+    if ct:
+        multi_stop_gradient(ct, [(0, T.accent), (50, T.accent2), (100, T.accent)], 0)
+        glow(ct, T.accent.lstrip('#'), radius=18, alpha=0.35)
+
+    # Bottom accent bar
+    cb = rrect(slide, cx, cy + ch - 0.28, cw, 0.28, T.accent_rgb, radius_pct=0)
+    if cb:
+        set_solid_alpha(cb, 45)
+
+    # Right accent edge
+    accent_bar_v(slide, cx + cw - 0.26, cy + 0.42, ch - 0.7, T, width=0.26)
+
+    return mc
+
+
+def smart_header(slide, T, title: str, sub: str = '', slide_num=None,
+                  total=13, style='gradient', font='Cairo'):
+    """
+    Smart header v28 — content-aware title sizing.
+    Automatically adjusts font size based on title length.
+    style: 'gradient' | 'split' | 'minimal'
+    """
+    HEADER_H = 2.9
+
+    if style == 'gradient':
+        gradient_rect(slide, 0, 0, W, HEADER_H, T.grad2, T.grad1, angle=135)
+        # Bottom accent line
+        al = rect(slide, 0, HEADER_H - 0.22, W, 0.22, T.accent_rgb)
+        if al:
+            multi_stop_gradient(al, [(0, T.bg), (40, T.accent),
+                                     (60, T.accent2), (100, T.bg)], 0)
+        # Right accent bar
+        av = rect(slide, W - 0.52, 0, 0.52, HEADER_H, T.accent_rgb)
+        if av:
+            gradient_fill(av, T.accent_grad1, T.accent_grad2, 90)
+            glow(av, T.accent.lstrip('#'), radius=12, alpha=0.22)
+
+        # Decorative orb
+        oval(slide, W - 6, -2.5, 8, 8, T.accent_rgb, alpha=7)
+
+    elif style == 'split':
+        # Upper half dark gradient
+        gradient_rect(slide, 0, 0, W, HEADER_H * 0.65, T.grad1, T.grad2, angle=0)
+        # Lower transition
+        rect(slide, 0, HEADER_H * 0.65, W, HEADER_H * 0.35, T.bg_rgb)
+        al = rect(slide, 0, HEADER_H - 0.18, W, 0.18, T.accent_rgb)
+        if al:
+            multi_stop_gradient(al, [(0, T.bg), (50, T.accent), (100, T.bg)], 0)
+        av = rect(slide, W - 0.42, 0, 0.42, HEADER_H * 0.65, T.accent_rgb)
+        if av:
+            gradient_fill(av, T.accent_grad1, T.accent_grad2, 90)
+
+    else:  # minimal
+        gradient_rect(slide, 0, 0, W, HEADER_H, T.grad2, T.grad1, angle=160)
+        hline(slide, 0, HEADER_H - 0.16, W, T.accent_rgb, thickness=0.16)
 
     # Slide number badge
     if slide_num is not None:
-        nb_s = 0.78
-        nb_x = 1.05
-        nb_y = (HDR_H - nb_s) / 2
-        nb_c = oval(slide, nb_x, nb_y, nb_s, nb_s, T.accent_rgb)
-        if nb_c:
-            multi_stop_gradient(nb_c, [(0, T.accent_grad1), (100, T.accent_grad2)], 135)
-            shadow(nb_c, blur=10, dist=3, alpha=0.38)
+        nb_s = 0.74
+        nb_x = 1.1
+        nb_y = (HEADER_H - nb_s) / 2
+        nb = oval(slide, nb_x, nb_y, nb_s, nb_s, T.accent_rgb)
+        if nb:
+            gradient_fill(nb, T.accent_grad1, T.accent_grad2, 135)
+            shadow(nb, blur=8, dist=2, alpha=0.38)
         txt(slide, str(slide_num), nb_x, nb_y, nb_s, nb_s,
-            font="Calibri", size=15, bold=True,
-            color=T.text_dark_rgb, align=PP_ALIGN.CENTER, rtl=False, vcenter=True)
-        txt(slide, f"/{total}", nb_x + nb_s, nb_y + nb_s * 0.32, 0.85, nb_s * 0.38,
-            font="Calibri", size=8, bold=False,
-            color=T.muted_rgb, align=PP_ALIGN.LEFT, rtl=False, vcenter=True)
-        title_x = nb_x + nb_s + 0.9
+            font='Calibri', size=14, bold=True, color=T.text_dark_rgb,
+            align=PP_ALIGN.CENTER, rtl=False, vcenter=True)
+        txt(slide, f'/{total}', nb_x + nb_s, nb_y + nb_s * 0.32, 0.8, nb_s * 0.36,
+            font='Calibri', size=8, bold=False, color=T.muted_rgb,
+            align=PP_ALIGN.LEFT, rtl=False, vcenter=True)
+        title_x = nb_x + nb_s + 0.95
     else:
-        title_x = 0.72
+        title_x = 0.7
 
-    title_w = W - title_x - 0.72
-    fs_title = _smart_font_size(title, 30, 20, 34, title_w, HDR_H * 0.65)
-    txt(slide, title, title_x, 0.18, title_w, HDR_H * 0.63,
-        font=font, size=fs_title, bold=True,
-        color=T.text_light_rgb, align=PP_ALIGN.RIGHT,
-        rtl=True, vcenter=True, line_spacing=1.05)
+    # Content-aware title sizing
+    title_len = len(title)
+    if title_len <= 15:
+        title_fs = 32
+    elif title_len <= 25:
+        title_fs = 30
+    elif title_len <= 35:
+        title_fs = 27
+    else:
+        title_fs = 24
 
-    if subtitle:
-        fs_sub = min(14.5, max(11, fs_title * 0.44))
-        txt(slide, subtitle, title_x, HDR_H * 0.63, title_w, HDR_H * 0.33,
-            font=font, size=fs_sub, bold=False, italic=True,
+    title_w = W - title_x - 0.65
+    title_area_h = HEADER_H * (0.60 if sub else 0.82)
+    title_y = (HEADER_H - title_area_h - (0.0 if not sub else 0.0)) * 0.35
+
+    txt(slide, title, title_x, title_y, title_w, title_area_h,
+        font=font, size=title_fs, bold=True, color=T.text_light_rgb,
+        align=PP_ALIGN.RIGHT, rtl=True, vcenter=True, line_spacing=1.08)
+
+    if sub:
+        sub_y = title_y + title_area_h
+        sub_h = HEADER_H - sub_y - 0.28
+        txt(slide, sub, title_x, sub_y, title_w, sub_h,
+            font=font, size=13, bold=False, italic=True,
             color=T.muted_rgb, align=PP_ALIGN.RIGHT,
             rtl=True, vcenter=True, line_spacing=1.0)
 
-    return HDR_H
+    return HEADER_H
 
 
-def section_divider_line(slide, x, y, w, T):
-    """Triple-layer decorative divider."""
-    d1 = rect(slide, x, y, w, 0.07, T.accent_rgb)
-    if d1:
-        multi_stop_gradient(d1, [(0, T.bg2), (50, T.accent), (100, T.bg2)], 0)
-    rect(slide, x + w * 0.08, y + 0.1, w * 0.84, 0.03, T.muted_rgb)
-
-
-def two_col_layout(n_items):
-    """Return (cols, rows) for n items, preferring 2-col layout when n>3."""
-    if n_items <= 3:
-        return n_items, 1
-    elif n_items <= 6:
-        return 2, (n_items + 1) // 2
-    else:
-        return 3, (n_items + 2) // 3
-
-
-def adaptive_body_size(text: str, container_h: float,
-                        base=13.5, min_s=10.5, max_s=16.0) -> float:
-    """Scale body text to fill a container height comfortably."""
-    n_words = len(text.split())
-    if n_words <= 10:
-        factor = 1.15
-    elif n_words <= 20:
-        factor = 1.0
-    elif n_words <= 35:
-        factor = 0.88
-    elif n_words <= 55:
-        factor = 0.76
-    else:
-        factor = 0.65
-    size = base * factor
-    # Also constrain to height
-    h_factor = container_h * 4.5
-    size = min(size, h_factor)
-    return max(min_s, min(max_s, size))
-
-
-def premium_bg(slide, T, style='a'):
-    """
-    Enhanced background with depth layers and ambient shapes.
-    Styles: 'a' (radial), 'b' (diagonal), 'c' (corner), 'd' (concentric)
-    """
-    bg(slide, T.bg_rgb)
-    angle_map = {'a': 135, 'b': 160, 'c': 90, 'd': 45}
-    gradient_rect(slide, 0, 0, W, H, T.grad1, T.grad2,
-                  angle=angle_map.get(style, 135))
-
-    if style == 'a':
-        oval(slide, -4, -4, 13, 13, T.accent_rgb, alpha=5)
-        oval(slide, W - 10, H - 9, 15, 15, T.bg2_rgb, alpha=42)
-        oval(slide, W - 7, -1, 9, 9, T.accent_rgb, alpha=4)
-        decorative_dots(slide, 1.2, H - 4.5, 5, 3, 0.16, 0.42, T.accent_rgb, alpha=11)
-    elif style == 'b':
-        diamond(slide, W - 7.5, -2.5, 6.5, 6.5, T.accent_rgb, alpha=6)
-        diamond(slide, -1.5, H - 5, 5, 5, T.accent_rgb, alpha=5)
-        hexagon(slide, W - 5, H * 0.3, 3.0, 3.0, T.accent_rgb, alpha=7)
-        decorative_dots(slide, 1.0, 1.8, 4, 4, 0.15, 0.36, T.accent_rgb, alpha=9)
-        oval(slide, W * 0.35, -3, 8, 8, T.accent_rgb, alpha=3)
-    elif style == 'c':
-        oval(slide, -5, -4, 13, 13, T.accent_rgb, alpha=4)
-        oval(slide, W - 11, H - 10, 16, 16, T.accent_rgb, alpha=4)
-        oval(slide, W - 7, -3, 10, 10, T.bg2_rgb, alpha=38)
-        decorative_dots(slide, W - 7, 1.5, 4, 5, 0.14, 0.35, T.accent_rgb, alpha=10)
-        oval(slide, -2, H * 0.4, 6, 6, T.bg2_rgb, alpha=22)
-    elif style == 'd':
-        for r, a in [(28, 3), (22, 4), (16, 5), (10, 7), (6, 9)]:
-            oval(slide, W / 2 - r / 2, H / 2 - r / 2, r, r, T.accent_rgb, alpha=a)
-        decorative_dots(slide, 1.8, H - 4.2, 5, 2, 0.18, 0.44, T.accent_rgb, alpha=11)
+def decorative_corner(slide, T, corner='tr', size=3.5):
+    """Decorative geometric corner element."""
+    if corner == 'tr':   # top-right
+        oval(slide, W - size * 0.7, -size * 0.3, size, size, T.accent_rgb, alpha=6)
+        oval(slide, W - size * 0.4, -size * 0.1, size * 0.55, size * 0.55, T.bg2_rgb, alpha=38)
+    elif corner == 'bl':  # bottom-left
+        oval(slide, -size * 0.3, H - size * 0.7, size, size, T.accent_rgb, alpha=5)
+        oval(slide, -size * 0.1, H - size * 0.4, size * 0.5, size * 0.5, T.bg2_rgb, alpha=32)
+    elif corner == 'tl':
+        oval(slide, -size * 0.4, -size * 0.3, size, size, T.accent_rgb, alpha=5)
+    elif corner == 'br':
+        oval(slide, W - size * 0.6, H - size * 0.6, size, size, T.accent_rgb, alpha=5)
